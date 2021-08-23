@@ -31,17 +31,7 @@ class RestController():
             self.verify_certs = False
 
     def getUser(self, uuid):
-        OAUTH_URL = f"https://{self.target_url}/learn/api/public/v1/users/uuid:{uuid}?fields=userName"
-        
-        r = requests.get(OAUTH_URL, headers=self.HEADER, verify=self.verify_certs)
-
-        if r.status_code == 200:
-            return json.loads(r.text)
+        return
     
     def getCourse(self, uuid):
-        OAUTH_URL = f"https://{self.target_url}/learn/api/public/v3/courses/uuid:{uuid}?fields=id,externalId"
-        
-        r = requests.get(OAUTH_URL, headers=self.HEADER, verify=self.verify_certs)
-
-        if r.status_code == 200:
-            return json.loads(r.text)
+        return
