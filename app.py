@@ -7,11 +7,10 @@ from tempfile import mkdtemp
 from flask import Flask, render_template
 from flask import redirect, request
 from flask_caching import Cache
-from flask_login import login_required
 from pylti1p3.contrib.flask import FlaskMessageLaunch, FlaskOIDCLogin, FlaskRequest, FlaskCacheDataStorage
 from pylti1p3.tool_config import ToolConfJsonFile
 
-import Config
+import Config as config
 from RestAuthContoller import RestAuthController
 
 ## TODO
@@ -38,13 +37,6 @@ app.config.from_mapping(Config.config)
 
 cache = Cache(app)
 
-
-@app.route('/', methods=['GET', 'POST'])
-@login_required
-def index():
-    return render_template('index.html')
-
-
 class ExtendedFlaskMessageLaunch(FlaskMessageLaunch):
 
     def validate_nonce(self):
@@ -67,6 +59,10 @@ def get_lti_config_path():
 def get_launch_data_storage():
     return FlaskCacheDataStorage(cache)
 
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    return render_template('helloworld.html')
 
 @app.route('/login/', methods=['GET', 'POST'])
 def login():
@@ -120,7 +116,7 @@ def launch():
         'client_id': Config.config['LEARN_REST_KEY'],
         'one_time_session_token': one_time_session_token,
         'scope': '*',
-        'state': str(uuid.uuid4())
+        'state': message_launch.get_launch_id()
     }
 
     encodedParams = urllib.parse.urlencode(params)
@@ -138,14 +134,20 @@ def authcode():
     state = request.args.get('state', '')
     print(authcode)
 
+    # TODO Implement REST call to get course created date, add it and data from launch to kwargs
+    tool_conf = ToolConfJsonFile(get_lti_config_path())
+    flask_request = FlaskRequest()
+    launch_data_storage = get_launch_data_storage()
+
+    message_launch = FlaskMessageLaunch.from_cache(state, request, tool_conf,
+                                                    launch_data_storage=launch_data_storage)
+    
+    message_launch_data = message_launch.get_launch_data()
+
     restAuthController = RestAuthController.RestAuthController(authcode)
     restAuthController.setToken()
     token = restAuthController.getToken()
     uuid = restAuthController.getUuid()
-
-
-    # TODO Implement REST call to get course created date, add it and data from launch to kwargs
-
 
     tp_kwargs = {
         'title': PAGE_TITLE,
