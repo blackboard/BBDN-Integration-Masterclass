@@ -4,17 +4,19 @@ import urllib
 import uuid
 from tempfile import mkdtemp
 
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 from flask import redirect, request
 from flask_caching import Cache
+
 from pylti1p3.contrib.flask import FlaskMessageLaunch, FlaskOIDCLogin, FlaskRequest, FlaskCacheDataStorage
 from pylti1p3.tool_config import ToolConfJsonFile
 
 import Config as config
-from RestAuthContoller import RestAuthController
+
+import RestController
+import RestAuthController
 
 ## TODO
-
 PAGE_TITLE = 'Title'
 
 
@@ -33,7 +35,7 @@ app = Flask('LTI-Workshop', template_folder='templates', static_folder='static')
 
 app.wsgi_app = ReverseProxied(app.wsgi_app)
 
-app.config.from_mapping(Config.config)
+app.config.from_mapping(config.tool_config)
 
 cache = Cache(app)
 
@@ -58,7 +60,6 @@ def get_lti_config_path():
 
 def get_launch_data_storage():
     return FlaskCacheDataStorage(cache)
-
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -89,71 +90,31 @@ def launch():
     message_launch = ExtendedFlaskMessageLaunch(flask_request, tool_conf, launch_data_storage=launch_data_storage)
     message_launch_data = message_launch.get_launch_data()
     pprint.pprint(message_launch_data)
-    tpl_kwargs = {
-        'page_title': PAGE_TITLE,
-        'is_deep_link_launch': message_launch.is_deep_link_launch(),
-        'launch_data': message_launch.get_launch_data(),
-        'launch_id': message_launch.get_launch_id(),
-        'curr_user_name': message_launch_data.get('name', '')
-    }
-
-    learn_url = message_launch_data['https://purl.imsglobal.org/spec/lti/claim/tool_platform']['url'].rstrip('/')
-
-    # Get the value of the one time session token from the LTI claim
-    one_time_session_token = message_launch_data['https://blackboard.com/lti/claim/one_time_session_token']
-
-    # If there is no comma in the value, we've hit the bug. Add it and the user's UUID
-    if "," not in one_time_session_token:
-        one_time_session_token += "," + message_launch_data['sub']
-
-    # TODO We need to make LTI launch data available to the REST application below. Maybe make
-    # the state equal to the launchID that has the cached launch data? Is that bad form?
-
-    # Add the one_time_session_cookie to the query parameters to send to the Authorization Code endpoint
-    params = {
-        'redirect_uri': Config.config['SERVER_NAME'] + '/authcode/',
-        'response_type': 'code',
-        'client_id': Config.config['LEARN_REST_KEY'],
-        'one_time_session_token': one_time_session_token,
-        'scope': '*',
-        'state': message_launch.get_launch_id()
-    }
-
-    encodedParams = urllib.parse.urlencode(params)
-
-    get_authcode_url = learn_url + '/learn/api/public/v1/oauth2/authorizationcode?' + encodedParams
-
-    print("authcode_URL: " + get_authcode_url)
-
-    return (redirect(get_authcode_url))
-
-
-@app.route('/authcode/', methods=['GET', 'POST'])
-def authcode():
-    authcode = request.args.get('code', '')
-    state = request.args.get('state', '')
-    print(authcode)
-
-    # TODO Implement REST call to get course created date, add it and data from launch to kwargs
-    tool_conf = ToolConfJsonFile(get_lti_config_path())
-    flask_request = FlaskRequest()
-    launch_data_storage = get_launch_data_storage()
-
-    message_launch = FlaskMessageLaunch.from_cache(state, request, tool_conf,
-                                                    launch_data_storage=launch_data_storage)
     
-    message_launch_data = message_launch.get_launch_data()
-
-    restAuthController = RestAuthController.RestAuthController(authcode)
+    restAuthController = RestAuthController.RestAuthController()
     restAuthController.setToken()
     token = restAuthController.getToken()
-    uuid = restAuthController.getUuid()
+
+    restController = RestController.RestController(token)
+    user = restController.getUser(message_launch_data["sub"])
+    course = restController.getCourse(message_launch_data["https://purl.imsglobal.org/spec/lti/claim/context"]["id"])
 
     tp_kwargs = {
-        'title': PAGE_TITLE,
+        "username": user['userName'],
+        "user_uuid": message_launch_data["sub"],
+        "user_batch_uid": message_launch_data["https://purl.imsglobal.org/spec/lti/claim/lis"]["person_sourcedid"],
+        "course_id": course['id'],
+        "course_title": message_launch_data["https://purl.imsglobal.org/spec/lti/claim/context"]["title"],
+        "course_uuid": message_launch_data["https://purl.imsglobal.org/spec/lti/claim/context"]["id"],
+        "course_batch_uid": course['externalId'] 
     }
 
     return render_template('index.html', **tp_kwargs)
+
+@app.route('/jwks/', methods=['GET'])
+def get_jwks():
+    tool_conf = ToolConfJsonFile(get_lti_config_path())
+    return jsonify({'keys': tool_conf.get_jwks()})
 
 if __name__ == '__main__':
     restAuthController = None

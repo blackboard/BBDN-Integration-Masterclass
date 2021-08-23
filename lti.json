@@ -2,15 +2,15 @@
   "https://blackboard.com": [
     {
       "default": true,
-      "client_id": "CLIENTID",
+      "client_id": "dbefa171-0a77-455b-aee4-a123280e901c",
       "auth_login_url": "https://developer.blackboard.com/api/v1/gateway/oidcauth",
       "auth_token_url": "https://developer.blackboard.com/api/v1/gateway/oauth2/jwttoken",
-      "key_set_url": "https://developer.blackboard.com/api/v1/management/applications/CLIENTID/jwks.json",
+      "key_set_url": "https://developer.blackboard.com/api/v1/management/applications/dbefa171-0a77-455b-aee4-a123280e901c/jwks.json",
       "key_set": null,
       "private_key_file": "keys/private.key",
       "public_key_file": "keys/public.key",
       "deployment_ids": [
-        "DEPLOYMENTID"
+        "589937b5-a3e1-41f1-add1-aa74c3088ba1"
       ]
     }
   ]

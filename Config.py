@@ -1,5 +1,7 @@
+# TODO Add the right values
 from tempfile import mkdtemp
 from decouple import config
+
 DOMAIN = config('DOMAIN', default='0.0.0.0')
 PORT = config('PORT', default='5000')
 tool_config = {
@@ -16,9 +18,9 @@ tool_config = {
     "SESSION_COOKIE_SAMESITE": "None",  # should be 'None' in case of HTTPS usage (production)
     "DEBUG_TB_INTERCEPT_REDIRECTS": False,
     "SERVER_NAME": DOMAIN + (':' + PORT) if PORT != '80' else '',
-    "LEARN_REST_KEY" : "somekey",
-    "LEARN_REST_SECRET" : "somekey",
-    "LEARN_REST_HOST" : "somekey",
-    "APP_URL" : "somekey",
-    "VERIFY_CERTS" : 'True'
+    "LEARN_REST_KEY" : "4e49a562-7165-47b4-a731-1c1517781da2",
+    "LEARN_REST_SECRET" : "5NvXTfvTkzvTson0OKF4zBuDmVzLCSJn",
+    "LEARN_REST_URL" : "devcon.blackboard.com",
+    "APP_URL" : "https://imws.ngrok.io",
+    "VERIFY_CERTS" : "True"
 }
